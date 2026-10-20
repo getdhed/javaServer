@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app version="3.0" xmlns="http://java.sun.com/xml/ns/javaee"
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+xsi:schemaLocation="http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_3_0.xsd">
+    <servlet>
+        <servlet-name>MyServlet</servlet-name>
+        <servlet-class>MyServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>MyServlet</servlet-name>
+        <url-pattern>/MyServlet</url-pattern>
+    </servlet-mapping>
+    <servlet>
+        <servlet-name>WordServlet</servlet-name>
+        <servlet-class>WordServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>WordServlet</servlet-name>
+        <url-pattern>/WordServlet</url-pattern>
+    </servlet-mapping>
+    <servlet>
+        <servlet-name>GoldServlet</servlet-name>
+        <servlet-class>GoldServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>GoldServlet</servlet-name>
+        <url-pattern>/GoldServlet</url-pattern>
+    </servlet-mapping>
+    <servlet>
+        <servlet-name>MusicServlet</servlet-name>
+        <servlet-class>MusicServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>MusicServlet</servlet-name>
+        <url-pattern>/MusicServlet</url-pattern>
+    </servlet-mapping>
+    <welcome-file-list>
+        <welcome-file>
+            dictionary.html
+         </welcome-file>
+     </welcome-file-list>
+     <session-config>
+        <session-timeout>
+            30
+        </session-timeout>
+    </session-config>
+</web-app>

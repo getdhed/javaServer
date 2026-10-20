@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+      <head>
+        <title></title>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    </head>
+    <body bgcolor="#aaccff">
+        <Font color="green" size="10">
+         Форма для работы со словарем
+        </Font>
+        <br>
+        <br>
+        <form name="frm" method="Get" action="MyServlet">
+           
+            <Font color="blue" size="6"> Введите русское слово:</Font><Input type="Text" name="txt" value=""/>
+            <input type="hidden" name="dir" value="ru"/>
+            <br>
+            <br>
+ <Font color="blue" size="6">Перевод: </Font><input type="text" name ="trans" value="     "/><br>
+        <h4>Кликни здесь для получения перевода :<Input type="submit" value="Перевести"/>
+        </h4>
+           
+        </form>
+        <form name="frm2" method="Get" action="MyServlet">
+            <Font color="blue" size="6"> Введите английское слово:</Font><Input type="Text" name="txt" value=""/>
+            <input type="hidden" name="dir" value="en"/>
+            <br>
+            <br>
+            <h4>Обратный перевод :<Input type="submit" value="Обратный перевод"/>
+            </h4>
+        </form>
+        <br>
+        <a href="WordServlet">Скачать документ Word (вариант 4)</a>
+    </body>
+</html>
