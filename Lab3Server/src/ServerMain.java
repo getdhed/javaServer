@@ -13,7 +13,6 @@ public class ServerMain {
 
     public static void main(String[] args) {
         try {
-            Dictionary.load();
             int port = Integer.getInteger("lab3.port", 8080);
             HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
             server.createContext("/MyServlet", new ServletHandler());
@@ -67,7 +66,14 @@ public class ServerMain {
                 format = (String) p.get("format");
             }
             boolean reverse = dir.equals("en");
-            String trans = Dictionary.translate(word, reverse);
+            String trans;
+            try {
+                trans = Dictionary.translate(word, reverse);
+            } catch (java.sql.SQLException err) {
+                System.err.println("PostgreSQL error: " + err.getMessage());
+                sendText(ex, 503, "База PostgreSQL недоступна. Проверьте настройки LAB3_DB_* и JDBC-драйвер.");
+                return;
+            }
             byte[] data;
             String type;
             if (format.equals("text")) {

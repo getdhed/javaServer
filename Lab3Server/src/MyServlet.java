@@ -6,11 +6,6 @@ import javax.servlet.http.HttpServletResponse;
 
 public class MyServlet extends HttpServlet {
 
-    @Override
-    public void init() {
-        Dictionary.loadFromServlet(getServletContext().getResourceAsStream("/WEB-INF/dictionary.txt"));
-    }
-
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         response.setContentType("text/html;charset=UTF-8");
@@ -19,7 +14,15 @@ public class MyServlet extends HttpServlet {
         String dir = "" + request.getParameter("dir");
         String format = "" + request.getParameter("format");
         boolean reverse = dir.equals("en");
-        String trans = Dictionary.translate(rus_word, reverse);
+        String trans;
+        try {
+            trans = Dictionary.translate(rus_word, reverse);
+        } catch (java.sql.SQLException ex) {
+            getServletContext().log("Ошибка словаря PostgreSQL", ex);
+            response.sendError(HttpServletResponse.SC_SERVICE_UNAVAILABLE,
+                    "PostgreSQL недоступен: проверьте настройки подключения и JDBC-драйвер");
+            return;
+        }
 
         if (format.equals("text")) {
             out.print(trans);
