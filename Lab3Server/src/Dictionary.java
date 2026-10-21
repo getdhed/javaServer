@@ -1,74 +1,54 @@
-import java.io.*;
-import java.util.*;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.Locale;
 
-public class Dictionary {
+/**
+ * Перевод слов из PostgreSQL. База доступна только серверу, не Swing-клиенту.
+ * Данные больше НЕ читаются из dictionary.txt или HashMap.
+ */
+public final class Dictionary {
 
-    static HashMap rusToEng = new HashMap();
-    static HashMap engToRus = new HashMap();
-    static boolean loaded = false;
+    private static final String DEFAULT_URL = "jdbc:postgresql://localhost:5432/lab3_dictionary";
 
-    public static synchronized void load() {
-        if (loaded) {
-            return;
-        }
-        try (InputStream in = new FileInputStream("web/WEB-INF/dictionary.txt")) {
-            readWords(in);
-        } catch (IOException e) {
-            System.err.println("Ошибка чтения словаря: " + e.getMessage());
+    private Dictionary() { }
+
+    private static String setting(String key, String fallback) {
+        String value = System.getenv(key);
+        return value == null || value.isBlank() ? fallback : value;
+    }
+
+    private static Connection connect() throws SQLException {
+        String url = setting("LAB3_DB_URL", DEFAULT_URL);
+        String user = setting("LAB3_DB_USER", "postgres");
+        String password = System.getenv("LAB3_DB_PASSWORD");
+        // JDBC-драйвер PostgreSQL должен быть в classpath (lib/postgresql-jdbc.jar).
+        DriverManager.setLoginTimeout(5);
+        return DriverManager.getConnection(url, user, password == null ? "" : password);
+    }
+
+    public static void checkConnection() throws SQLException {
+        try (Connection ignored = connect()) {
+            // Служит для диагностики запуска; таблица проверяется при запросе перевода.
         }
     }
 
-    public static synchronized void loadFromServlet(InputStream in) {
-        if (loaded) {
-            try { if (in != null) in.close(); } catch (IOException ignored) {}
-            return;
-        }
-        if (in == null) {
-            System.err.println("WEB-INF/dictionary.txt не найден");
-            return;
-        }
-        try (InputStream stream = in) {
-            readWords(stream);
-        } catch (IOException e) {
-            System.err.println("Ошибка чтения словаря: " + e.getMessage());
-        }
-    }
-
-    private static void readWords(InputStream in) throws IOException {
-        try (BufferedReader reader = new BufferedReader(
-                new InputStreamReader(in, "UTF-8"))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                if (line.contains("-")) {
-                    String[] parts = line.split("-", 2);
-                    String ru = parts[0].trim().toLowerCase();
-                    String en = parts[1].trim().toLowerCase();
-                    rusToEng.put(ru, en);
-                    engToRus.put(en, ru);
-                }
-            }
-            loaded = true;
-        }
-    }
-
-    public static String translate(String word, boolean reverse) {
-        load();
-        if (word == null) {
+    public static String translate(String word, boolean reverse) throws SQLException {
+        if (word == null || word.trim().isEmpty()) {
             return "";
         }
-        word = word.trim().toLowerCase();
-        if (word.equals("")) {
-            return "";
-        }
-        if (reverse) {
-            if (engToRus.containsKey(word)) {
-                return (String) engToRus.get(word);
-            }
-        } else {
-            if (rusToEng.containsKey(word)) {
-                return (String) rusToEng.get(word);
+        String normalized = word.trim().toLowerCase(Locale.ROOT);
+        String sql = reverse
+                ? "SELECT russian_word FROM translations WHERE english_word = ?"
+                : "SELECT english_word FROM translations WHERE russian_word = ?";
+        try (Connection connection = connect();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, normalized);
+            try (ResultSet results = statement.executeQuery()) {
+                return results.next() ? results.getString(1) : "не найдено";
             }
         }
-        return "не найдено";
     }
 }
