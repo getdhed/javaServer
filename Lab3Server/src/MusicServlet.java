@@ -1,9 +1,9 @@
 import java.io.IOException;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
-/** Servlet-контейнер (Tomcat 9): выдаёт WAV по HTTP. */
+/** Servlet-контейнер (Tomcat 11 / GlassFish 8): выдаёт WAV по HTTP. */
 public class MusicServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)

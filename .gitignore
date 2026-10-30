@@ -19,3 +19,6 @@
 Thumbs.db
 .DS_Store
 *.war
+
+# Maven WAR build output
+**/target/

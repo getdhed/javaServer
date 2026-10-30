@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>by.lab3</groupId>
+    <artifactId>lab3-web</artifactId>
+    <version>1.0.0</version>
+    <packaging>war</packaging>
+    <name>Lab3 - Jakarta Servlet WAR for Tomcat 11 and GlassFish 8</name>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.release>21</maven.compiler.release>
+    </properties>
+
+    <dependencies>
+        <!-- The container provides Servlet API. Do not put it into WEB-INF/lib. -->
+        <dependency>
+            <groupId>jakarta.servlet</groupId>
+            <artifactId>jakarta.servlet-api</artifactId>
+            <version>6.1.0</version>
+            <scope>provided</scope>
+        </dependency>
+        <!-- Database driver is packed into WEB-INF/lib by Maven. -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>42.7.14</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <!-- One shared source tree; no duplication of Java business logic. -->
+        <sourceDirectory>${project.basedir}/../Lab3Server/src</sourceDirectory>
+        <finalName>Lab3Server</finalName>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.14.0</version>
+                <configuration>
+                    <!-- ServerMain is for independent net/http-style Java server only. -->
+                    <excludes>
+                        <exclude>ServerMain.java</exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-war-plugin</artifactId>
+                <version>3.4.0</version>
+                <configuration>
+                    <!-- Include existing dictionary.html, WEB-INF/web.xml and DOCX. -->
+                    <warSourceDirectory>${project.basedir}/../Lab3Server/web</warSourceDirectory>
+                    <failOnMissingWebXml>true</failOnMissingWebXml>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>
