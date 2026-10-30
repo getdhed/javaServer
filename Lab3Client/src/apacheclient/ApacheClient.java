@@ -43,9 +43,9 @@ import javax.swing.border.EmptyBorder;
  */
 public class ApacheClient extends JFrame {
 
-    // Для Tomcat 9: -Dlab3.serverUrl=http://localhost:8080/Lab3Server
+    // Контекст WAR приложения Tomcat; можно переопределить VM option -Dlab3.serverUrl=...
     private static final String BASE_URL = System.getProperty(
-            "lab3.serverUrl", "http://localhost:8080");
+            "lab3.serverUrl", "http://localhost:8080/Lab3Server");
 
     private final JTextField wordField = new JTextField();
     private final JTextArea resultArea = new JTextArea(5, 25);
