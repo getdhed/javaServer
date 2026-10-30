@@ -22,3 +22,6 @@ Thumbs.db
 
 # Maven WAR build output
 **/target/
+
+# Personal music: not tracked in the public repository
+Lab3Server/web/WEB-INF/music.wav

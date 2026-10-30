@@ -17,7 +17,7 @@ Tomcat 11
   +-- /MyServlet    -> Dictionary.java -> JDBC -> PostgreSQL:5432
   +-- /WordServlet  -> WEB-INF/lab3-document.docx
   +-- /GoldServlet  -> GoldQuoteService -> HTML-страницы котировок
-  +-- /MusicServlet -> MusicGenerator -> WAV
+  +-- /MusicServlet -> WAV-файл (WEB-INF или LAB3_MUSIC_FILE)
 ```
 
 Сервлеты зарегистрированы в `Lab3Server/web/WEB-INF/web.xml`.
@@ -53,6 +53,35 @@ set "LAB3_DB_PASSWORD=ВАШ_ЛОКАЛЬНЫЙ_ПАРОЛЬ"
 Перезапустите Tomcat. Если он работает как служба Windows, учтите: она
 может не использовать `setenv.bat`; задайте окружение непосредственно службе.
 Не записывайте настоящий пароль в репозиторий.
+
+### Музыка из файла вместо генерации
+
+**Вариант 1 (проще):** скопируйте свой файл WAV в
+`Lab3Server/web/WEB-INF/music.wav`. Выполните `Clean and Build`,
+затем заново разверните `Lab3Server.war` на Tomcat.
+Файл включится в WAR и станет доступен только через `/MusicServlet`.
+
+**Вариант 2 (файл в любой папке компьютера):**
+задайте окружение процесса Tomcat, например, в `<TOMCAT_HOME>\\bin\\setenv.bat`:
+
+```bat
+set "LAB3_MUSIC_FILE=C:\\Users\\YourUser\\Music\\my-song.wav"
+```
+
+Укажите **свой** путь, затем полностью перезапустите Tomcat. Если он
+управляется через NetBeans, может потребоваться перезапустить NetBeans,
+чтобы сервер получил новые переменные окружения. Этот способ позволяет
+менять музыку без пересборки WAR (путь остаётся тем же).
+
+Оба варианта сохраняют учебную архитектуру:
+`Swing-клиент → HTTP GET /MusicServlet → Tomcat → WAV → javax.sound.sampled.Clip`.
+
+**Важно:** клиент использует стандартный `javax.sound.sampled` и ожидает
+WAV с поддерживаемым аудиоформатом (лучше PCM WAV). MP3 без дополнительных
+Java-библиотек может не воспроизводиться. Музыка, доступная только на
+компьютере клиента, но не сервера Tomcat, не будет доступна сервлету.
+**Личный музыкальный файл не загружайте в публичный GitHub без разрешения
+правообладателя.** Файл `Lab3Server/web/WEB-INF/music.wav` игнорируется Git.
 
 ### 3. Собрать и развернуть WAR
 
@@ -90,7 +119,7 @@ set "LAB3_DB_PASSWORD=ВАШ_ЛОКАЛЬНЫЙ_ПАРОЛЬ"
 - `Dictionary.java`: `DriverManager` + `PreparedStatement` + `ResultSet`, только PostgreSQL.
 - `WordServlet.java`: отдаёт оригинальный DOCX, клиент отображает содержимое справа.
 - `GoldServlet.java`: передаёт результат `GoldQuoteService`, которому может мешать HTTP 403.
-- `MusicServlet.java`: отдаёт WAV из `MusicGenerator`.
+- `MusicServlet.java`: читает готовый WAV-файл и передаёт его по HTTP без генерации.
 
 Примечание: здесь выбран простой JDBC по одному соединению на перевод,
 без Tomcat JNDI DataSource или connection pool — для учебной работы этого достаточно.
