@@ -292,8 +292,8 @@ public class ApacheClient extends JFrame {
     /** Загрузка котировки без блокировки EDT. Результат идёт в прежнее поле перевода. */
     private void showGold() {
         goldButton.setEnabled(false);
-        resultArea.setText("Получаем котировку золота со Stooq…");
-        status.setText("HTTP GET /GoldServlet → CSV Stooq → цена золота");
+        resultArea.setText("Получаем цену золота с Google Finance…");
+        status.setText("HTTP GET /GoldServlet → HTML-тег Google Finance → цена золота");
         new SwingWorker<String, Void>() {
             @Override
             protected String doInBackground() throws Exception {
@@ -333,10 +333,10 @@ public class ApacheClient extends JFrame {
                 try {
                     resultArea.setText(get());
                     resultArea.setCaretPosition(0);
-                    status.setText("Последняя доступная котировка XAU/USD со Stooq.");
+                    status.setText("Котировка фьючерса COMEX с Google Finance.");
                 } catch (Exception ex) {
                     resultArea.setText("Ошибка получения золота: " + errorMessage(ex));
-                    status.setText("Не удалось получить котировку со Stooq.");
+                    status.setText("Не удалось получить цену с Google Finance.");
                 }
             }
         }.execute();

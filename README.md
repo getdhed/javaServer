@@ -8,10 +8,14 @@
 
 - **Translate / Reverse** → `MyServlet` → `Dictionary` → PostgreSQL.
 - **Word** → `WordServlet` отдаёт DOCX, Swing показывает его справа.
-- **Gold** → `GoldServlet` получает CSV-котировку XAU/USD с Stooq, возвращает **одну строку**:
-  `Stooq: золото — <цена> USD за тройскую унцию (дата: YYYY-MM-DD)`.
-  `Close` — последняя опубликованная котировка, не гарантированно цена в реальном времени.
-  Если Stooq ограничивает доступ, возвращается короткая текстовая ошибка HTTP 502 без HTML.
+- **Gold** → `GoldServlet` вызывает `GoldQuoteService`, который скачивает
+  **HTML-страницу Google Finance** и получает цену из тега
+  `<div class="YMlKec fxKbKc">...</div>` с помощью библиотеки jsoup.
+  Никаких JSON, CSV или API: только HTML и `selectFirst("div.YMlKec.fxKbKc")`.
+  Возвращается **одна строка**: `Google Finance (COMEX): $3,855.40 за тройскую унцию`
+  (число — пример, не актуальная котировка). Это цена фьючерса GCW00,
+  не спотовая цена. Если сайт заблокирует запрос или изменит HTML,
+  сервер возвращает короткую текстовую ошибку HTTP 502.
 - **Музыка** → `MusicServlet` передаёт готовый `music.mp3` → клиент
   воспроизводит MP3 через BasicPlayer: запуск / пауза / продолжение.
 
@@ -39,9 +43,9 @@
 ## Проверка Gold
 
 Открой `http://localhost:8080/Lab3Server/GoldServlet`. Должна появиться одна
-строка с последней доступной ценой XAU/USD со Stooq, либо короткая
-ошибка HTTP 502. Используется внешний источник, доступность не гарантирована.
-Сайт: https://stooq.com/q/?s=xauusd.
+строка с ценой фьючерса GCW00:COMEX, взятой из HTML-тега Google Finance,
+либо короткая ошибка HTTP 502. Доступность и структура сайта не гарантированы.
+Сайт: https://www.google.com/finance/quote/GCW00:COMEX?hl=en.
 При ошибке смотри строки `[LAB3-GOLD]` в логах Tomcat.
 
 ## PostgreSQL
@@ -61,7 +65,7 @@ Tomcat иначе, окружение может не наследоваться
 ## Код для защиты
 
 - `MusicServlet.java`: читает MP3 из `WEB-INF` и отправляет байты по HTTP.
-- `GoldQuoteService.java`: HTTP GET CSV со Stooq, чтение столбца Close.
+- `GoldQuoteService.java`: загрузка HTML Google Finance через jsoup и чтение тега цены.
 - `ApacheClient.java`: Swing-кнопки, HTTP-клиент, MP3-воспроизведение.
 - `MyServlet.java` / `Dictionary.java`: параметры запроса и JDBC.
 
