@@ -143,7 +143,7 @@ public class ApacheClient extends JFrame {
         c.insets = new Insets(16, 0, 6, 0);
         JLabel details = new JLabel("<html><b>Word</b> загружает настоящий DOCX<br>" +
                 "и показывает его справа, без Word.<br>"
-                + "<b>Gold</b> показывает последнюю цену золота со Stooq.<br>"
+                + "<b>Gold</b> показывает спотовую цену золота с Kitco.<br>"
                 + "<b>Музыка</b> воспроизводит MP3 с сервера (пауза/продолжить).</html>");
         controls.add(details, c);
 
@@ -292,8 +292,8 @@ public class ApacheClient extends JFrame {
     /** Загрузка котировки без блокировки EDT. Результат идёт в прежнее поле перевода. */
     private void showGold() {
         goldButton.setEnabled(false);
-        resultArea.setText("Получаем цену золота с Google Finance…");
-        status.setText("HTTP GET /GoldServlet → HTML-тег Google Finance → цена золота");
+        resultArea.setText("Получаем цену золота с Kitco…");
+        status.setText("HTTP GET /GoldServlet → HTML-тег Kitco → цена золота");
         new SwingWorker<String, Void>() {
             @Override
             protected String doInBackground() throws Exception {
@@ -333,10 +333,10 @@ public class ApacheClient extends JFrame {
                 try {
                     resultArea.setText(get());
                     resultArea.setCaretPosition(0);
-                    status.setText("Котировка фьючерса COMEX с Google Finance.");
+                    status.setText("Спотовая цена золота с Kitco.");
                 } catch (Exception ex) {
                     resultArea.setText("Ошибка получения золота: " + errorMessage(ex));
-                    status.setText("Не удалось получить цену с Google Finance.");
+                    status.setText("Не удалось получить цену с Kitco.");
                 }
             }
         }.execute();

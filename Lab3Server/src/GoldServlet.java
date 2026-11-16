@@ -17,7 +17,7 @@ public class GoldServlet extends HttpServlet {
             getServletContext().log("[LAB3-GOLD] Ошибка получения цены: " + ex.getMessage(), ex);
             // Текст ошибки вместо HTML-страницы Tomcat.
             response.setStatus(HttpServletResponse.SC_BAD_GATEWAY);
-            response.getWriter().print("Google Finance недоступен: " + ex.getMessage());
+            response.getWriter().print("Kitco недоступен: " + ex.getMessage());
         }
     }
 }
