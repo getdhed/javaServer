@@ -14,7 +14,10 @@ public class GoldServlet extends HttpServlet {
             byte[] body = GoldQuoteService.getQuote().getBytes(StandardCharsets.UTF_8);
             response.getOutputStream().write(body);
         } catch (IOException ex) {
-            response.sendError(HttpServletResponse.SC_BAD_GATEWAY, ex.getMessage());
+            getServletContext().log("[LAB3-GOLD] Ошибка получения цены: " + ex.getMessage(), ex);
+            // Текст ошибки вместо HTML-страницы Tomcat.
+            response.setStatus(HttpServletResponse.SC_BAD_GATEWAY);
+            response.getWriter().print("Stooq недоступен: " + ex.getMessage());
         }
     }
 }

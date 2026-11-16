@@ -8,10 +8,10 @@
 
 - **Translate / Reverse** → `MyServlet` → `Dictionary` → PostgreSQL.
 - **Word** → `WordServlet` отдаёт DOCX, Swing показывает его справа.
-- **Gold** → `GoldServlet` получает страницу Google Finance и возвращает **одну строку**:
-  `Google Finance (фьючерс COMEX): <цена> USD за тройскую унцию`.
-  Это котировка фьючерса GCW00, **не спотовая цена**. Если сайт недоступен или
-  блокирует автоматический доступ, отобразится ошибка, выдуманной цены нет.
+- **Gold** → `GoldServlet` получает CSV-котировку XAU/USD с Stooq, возвращает **одну строку**:
+  `Stooq: золото — <цена> USD за тройскую унцию (дата: YYYY-MM-DD)`.
+  `Close` — последняя опубликованная котировка, не гарантированно цена в реальном времени.
+  Если Stooq ограничивает доступ, возвращается короткая текстовая ошибка HTTP 502 без HTML.
 - **Музыка** → `MusicServlet` передаёт готовый `music.mp3` → клиент
   воспроизводит MP3 через BasicPlayer: запуск / пауза / продолжение.
 
@@ -36,6 +36,14 @@
 Проверка: `http://localhost:8080/Lab3Server/MusicServlet` должен вернуть MP3,
 `http://localhost:8080/Lab3Server/WordServlet` — DOCX.
 
+## Проверка Gold
+
+Открой `http://localhost:8080/Lab3Server/GoldServlet`. Должна появиться одна
+строка с последней доступной ценой XAU/USD со Stooq, либо короткая
+ошибка HTTP 502. Используется внешний источник, доступность не гарантирована.
+Сайт: https://stooq.com/q/?s=xauusd.
+При ошибке смотри строки `[LAB3-GOLD]` в логах Tomcat.
+
 ## PostgreSQL
 
 Рабочие настройки PostgreSQL **не изменены**. Java читает их из окружения Tomcat:
@@ -53,7 +61,7 @@ Tomcat иначе, окружение может не наследоваться
 ## Код для защиты
 
 - `MusicServlet.java`: читает MP3 из `WEB-INF` и отправляет байты по HTTP.
-- `GoldQuoteService.java`: HTTP GET Google Finance, чтение HTML, поиск цены.
+- `GoldQuoteService.java`: HTTP GET CSV со Stooq, чтение столбца Close.
 - `ApacheClient.java`: Swing-кнопки, HTTP-клиент, MP3-воспроизведение.
 - `MyServlet.java` / `Dictionary.java`: параметры запроса и JDBC.
 
