@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<actions>
+    <!-- NetBeans F6: assemble WAR and copy it to this user's Tomcat webapps.
+         Tomcat autoDeploy then redeploys the updated WAR automatically. -->
+    <action>
+        <actionName>run</actionName>
+        <goals>
+            <goal>package</goal>
+        </goals>
+        <properties>
+            <lab3.tomcat.webapps>C:/Tomcat11/apache-tomcat-11.0.27/webapps</lab3.tomcat.webapps>
+        </properties>
+    </action>
+</actions>

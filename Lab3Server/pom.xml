@@ -57,4 +57,43 @@
             </plugin>
         </plugins>
     </build>
+    <!--
+        Profile included only when NetBeans Run sets lab3.tomcat.webapps.
+        Clean and Build (ordinary package without property) stays portable.
+    -->
+    <profiles>
+        <profile>
+            <id>copy-war-to-local-tomcat</id>
+            <activation>
+                <property>
+                    <name>lab3.tomcat.webapps</name>
+                </property>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-antrun-plugin</artifactId>
+                        <version>3.1.0</version>
+                        <executions>
+                            <execution>
+                                <id>update-tomcat-war</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>run</goal>
+                                </goals>
+                                <configuration>
+                                    <target>
+                                        <echo message="LAB3 DEPLOY: copying Lab3Server.war to ${lab3.tomcat.webapps}" />
+                                        <copy file="${project.build.directory}/${project.build.finalName}.war"
+                                              todir="${lab3.tomcat.webapps}" overwrite="true" />
+                                    </target>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>
