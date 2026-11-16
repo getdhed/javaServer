@@ -14,6 +14,15 @@ public final class Dictionary {
     }
 
     private static Connection connect() throws SQLException {
+        // Tomcat инициализирует DriverManager до загрузки WEB-INF/lib.
+        // Поэтому JDBC-драйвер из WAR нужно загрузить явно.
+        try {
+            Class.forName("org.postgresql.Driver");
+        } catch (ClassNotFoundException ex) {
+            throw new SQLException(
+                    "JDBC-драйвер PostgreSQL не найден: проверьте WEB-INF/lib/postgresql-*.jar в развёрнутом WAR",
+                    "08001", ex);
+        }
         String url = setting("LAB3_DB_URL", "jdbc:postgresql://localhost:5432/lab3_dictionary");
         String user = setting("LAB3_DB_USER", "lab3_user");
         String password = System.getenv("LAB3_DB_PASSWORD");
