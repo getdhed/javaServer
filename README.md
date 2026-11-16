@@ -54,6 +54,35 @@ set "LAB3_DB_PASSWORD=ВАШ_ЛОКАЛЬНЫЙ_ПАРОЛЬ"
 может не использовать `setenv.bat`; задайте окружение непосредственно службе.
 Не записывайте настоящий пароль в репозиторий.
 
+### Диагностика подключения PostgreSQL (HTTP 503)
+
+При развёртывании Lab3Server проверяет соединение с PostgreSQL и выполняет
+`SELECT COUNT(*) FROM translations`. В логах Tomcat ищите метку `[LAB3-DB]`:
+
+```text
+[LAB3-DB] STARTUP: url=jdbc:postgresql://localhost:5432/lab3_dictionary (...), user=postgres (...), LAB3_DB_PASSWORD=SET
+[LAB3-DB] SUCCESS: PostgreSQL подключен, translations доступна, записей=15
+```
+
+Если БД не работает, вместо SUCCESS будет `FAILED`, сообщение PostgreSQL,
+`SQLState` и stack trace. Если `LAB3_DB_PASSWORD=MISSING`, запущенный
+Tomcat **не получил** пароль; это не доказывает, что `setenv.bat` отсутствует:
+NetBeans может запускать Tomcat минуя стандартные bat-скрипты.
+`DEFAULT` рядом с URL/пользователем значит, что соответствующая переменная
+не задана (будут использованы `lab3_dictionary` и `lab3_user`).
+`ENV` значит, что переменная задана.
+
+Логи видны в **NetBeans → Output → Apache Tomcat** либо в
+`<TOMCAT_HOME>\\logs` (например, `localhost.YYYY-MM-DD.log`).
+При нажатии Translate появится `[LAB3-DB] Translate ...`, а при SQL-ошибке
+— `Translate FAILED` с реальной причиной.
+Пароль никогда не пишется в лог; выводится только `SET` или `MISSING`.
+Диагностика запускается заново после пересборки и повторного развёртывания WAR.
+
+Если используете своего пользователя `postgres`, укажите именно его в
+`LAB3_DB_USER` и **реальное имя созданной базы** в `LAB3_DB_URL`.
+Новая версия кода не создаёт базу автоматически.
+
 ### Музыка из файла вместо генерации
 
 **Вариант 1 (проще):** скопируйте свой файл WAV в

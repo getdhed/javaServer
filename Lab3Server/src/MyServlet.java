@@ -15,12 +15,16 @@ public class MyServlet extends HttpServlet {
         String format = "" + request.getParameter("format");
         boolean reverse = dir.equals("en");
         String trans;
+        getServletContext().log("[LAB3-DB] Translate: проверка PostgreSQL для запроса перевода");
         try {
             trans = Dictionary.translate(rus_word, reverse);
+            getServletContext().log("[LAB3-DB] Translate: SQL-запрос успешно выполнен");
         } catch (java.sql.SQLException ex) {
-            getServletContext().log("Ошибка словаря PostgreSQL", ex);
+            getServletContext().log("[LAB3-DB] Translate FAILED: SQLState=" + ex.getSQLState()
+                    + ", errorCode=" + ex.getErrorCode() + ", message=" + ex.getMessage(), ex);
+            getServletContext().log("[LAB3-DB] Config: " + Dictionary.diagnosticConfig());
             response.sendError(HttpServletResponse.SC_SERVICE_UNAVAILABLE,
-                    "PostgreSQL недоступен: проверьте настройки подключения и JDBC-драйвер");
+                    "Ошибка PostgreSQL. Причина записана в логи Tomcat с меткой [LAB3-DB].");
             return;
         }
 

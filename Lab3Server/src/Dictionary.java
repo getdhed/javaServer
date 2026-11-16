@@ -24,6 +24,38 @@ public final class Dictionary {
         return DriverManager.getConnection(url, user, password);
     }
 
+    /**
+     * Диагностика конфигурации без вывода пароля.
+     * В частности, показывает, получил ли Tomcat LAB3_DB_PASSWORD.
+     */
+    public static String diagnosticConfig() {
+        String configuredUrl = System.getenv("LAB3_DB_URL");
+        String configuredUser = System.getenv("LAB3_DB_USER");
+        String password = System.getenv("LAB3_DB_PASSWORD");
+
+        String url = setting("LAB3_DB_URL", "jdbc:postgresql://localhost:5432/lab3_dictionary");
+        // На случай, если пароль ошибочно передали параметром URL.
+        String safeUrl = url.replaceAll("(?i)(password=)[^;&]+", "$1***");
+
+        return "url=" + safeUrl
+                + " (" + (configuredUrl == null || configuredUrl.isBlank() ? "DEFAULT" : "ENV") + ")"
+                + ", user=" + setting("LAB3_DB_USER", "lab3_user")
+                + " (" + (configuredUser == null || configuredUser.isBlank() ? "DEFAULT" : "ENV") + ")"
+                + ", LAB3_DB_PASSWORD=" + (password == null || password.isBlank() ? "MISSING" : "SET");
+    }
+
+    /** Проверяет не только соединение с PostgreSQL, но и наличие таблицы translations. */
+    public static long checkDatabase() throws SQLException {
+        try (Connection conn = connect();
+             PreparedStatement statement = conn.prepareStatement("SELECT COUNT(*) FROM translations")) {
+            statement.setQueryTimeout(8);
+            try (ResultSet results = statement.executeQuery()) {
+                results.next();
+                return results.getLong(1);
+            }
+        }
+    }
+
     public static String translate(String word, boolean reverse) throws SQLException {
         if (word == null || word.trim().isEmpty()) return "";
         String sql = reverse
