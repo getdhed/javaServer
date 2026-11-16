@@ -346,9 +346,21 @@ public class ApacheClient extends JFrame {
 
     /** Один переключатель: скачать WAV по HTTP и играть по кругу / остановить. */
     private void toggleMusic() {
+        // Повторное нажатие ставит на паузу и продолжает с того же места.
         if (musicClip != null && musicClip.isOpen()) {
-            stopMusic();
-            status.setText("Воспроизведение остановлено.");
+            if (musicClip.isRunning()) {
+                musicClip.stop(); // Не close(): сохраняем позицию воспроизведения.
+                musicButton.setText("Музыка ▶ Продолжить");
+                status.setText("Музыка на паузе.");
+            } else {
+                // После достижения конца песни следующий клик начинает её сначала.
+                if (musicClip.getFramePosition() >= musicClip.getFrameLength()) {
+                    musicClip.setFramePosition(0);
+                }
+                musicClip.start();
+                musicButton.setText("Музыка ⏸ Пауза");
+                status.setText("Музыка воспроизводится.");
+            }
             return;
         }
         musicButton.setEnabled(false);
@@ -388,9 +400,9 @@ public class ApacheClient extends JFrame {
                 try {
                     musicClip = get();
                     musicClip.setFramePosition(0);
-                    musicClip.loop(Clip.LOOP_CONTINUOUSLY);
-                    musicButton.setText("Музыка ■ Стоп");
-                    status.setText("Играет WAV, полученный по HTTP. Повторное нажатие — стоп.");
+                    musicClip.start();
+                    musicButton.setText("Музыка ⏸ Пауза");
+                    status.setText("Играет готовый WAV-файл, полученный по HTTP. Повторное нажатие — пауза.");
                 } catch (Exception ex) {
                     status.setText("Не удалось воспроизвести WAV.");
                     resultArea.setText("Ошибка музыки: " + errorMessage(ex));
