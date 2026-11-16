@@ -1,174 +1,61 @@
-# Лабораторная №3: Java Servlet + Tomcat + PostgreSQL
+# Лабораторная №3 — Java, Tomcat, PostgreSQL
 
-Два проекта NetBeans:
-- **Lab3Client** — Java Swing-клиент. Перевод, DOCX-просмотр, котировка золота, музыка.
-- **Lab3Server** — **Maven Web Application (WAR)**. Только сервлеты и Java-бизнес-логика. HTTP-сервер запускает Tomcat.
+Два Maven-проекта для NetBeans:
+- **Lab3Server** — WAR с сервлетами, запускается в Tomcat 11.
+- **Lab3Client** — обычное Swing-приложение, запускается отдельно через Run.
 
-Самостоятельный `ServerMain.java` и его `HttpHandler` удалены. Другого HTTP-сервера внутри приложения нет.
+## Что делает
 
-## Архитектура
+- **Translate / Reverse** → `MyServlet` → `Dictionary` → PostgreSQL.
+- **Word** → `WordServlet` отдаёт DOCX, Swing показывает его справа.
+- **Gold** → `GoldServlet` получает страницу Google Finance и возвращает **одну строку**:
+  `Google Finance (фьючерс COMEX): <цена> USD за тройскую унцию`.
+  Это котировка фьючерса GCW00, **не спотовая цена**. Если сайт недоступен или
+  блокирует автоматический доступ, отобразится ошибка, выдуманной цены нет.
+- **Музыка** → `MusicServlet` передаёт готовый `music.mp3` → клиент
+  воспроизводит MP3 через BasicPlayer: запуск / пауза / продолжение.
 
-```text
-Lab3Client (Swing)
-       |
-       | HTTP: localhost:8080/Lab3Server
-       v
-Tomcat 11
-  +-- /MyServlet    -> Dictionary.java -> JDBC -> PostgreSQL:5432
-  +-- /WordServlet  -> WEB-INF/lab3-document.docx
-  +-- /GoldServlet  -> GoldQuoteService -> HTML-страницы котировок
-  +-- /MusicServlet -> WAV-файл (WEB-INF или LAB3_MUSIC_FILE)
-```
+## Первый запуск после обновления (важно!)
 
-Сервлеты зарегистрированы в `Lab3Server/web/WEB-INF/web.xml`.
-Для PostgreSQL нужен только сервер, Swing-клиент к базе не подключается.
+Раньше **Lab3Client** был Ant-проектом. Теперь он **Maven-проект**, чтобы
+зависимость MP3-плеера скачивалась автоматически без ручных JAR.
 
-## Подготовка
+1. Закрой **Lab3Client** в NetBeans (**Close Project**).
+2. В корне `lab3` сделай `git pull --ff-only origin main`.
+3. В NetBeans **File → Open Project → Lab3Client**: теперь NetBeans узнает его
+   по `pom.xml`. При первом открытии Maven скачает BasicPlayer и зависимости.
+4. В `Lab3Server/web/WEB-INF/` положи свой файл **music.mp3**
+   (не переименованный WAV, а настоящий MP3). Трек **не коммить в Git**.
+5. **Lab3Server → Clean and Build**. Скопируй свежий
+   `Lab3Server/target/Lab3Server.war` в
+   `C:\\Tomcat11\\apache-tomcat-11.0.27\\webapps\\Lab3Server.war`
+   и перезапусти Tomcat. Если развёртываешь из NetBeans — используй только
+   этот способ, без параллельного ручного копирования.
+6. **Lab3Client → Run** (или из папки клиента `mvn exec:java`).
 
-Нужны **JDK 21**, NetBeans с Maven, **Tomcat 11.x** (Jakarta Servlet 6.1),
-PostgreSQL. Tomcat 9 и 10.1 не подходят к текущему Servlet API 6.1.
-Не запускайте старый `ServerMain`: он удалён. Запускать Tomcat и другой
-HTTP-сервер на одном порту 8080 одновременно нельзя.
+Проверка: `http://localhost:8080/Lab3Server/MusicServlet` должен вернуть MP3,
+`http://localhost:8080/Lab3Server/WordServlet` — DOCX.
 
-### 1. База данных
+## PostgreSQL
 
-- В pgAdmin/psql под администратором PostgreSQL выполните `Lab3Server/sql/create_database.sql`.
-  Сначала измените `CHANGE_ME_STRONG_PASSWORD` на свой пароль (в локальном SQL, не коммитьте его).
-- Затем подключитесь к созданной БД `lab3_dictionary` пользователем `lab3_user`
-  и выполните `Lab3Server/sql/init.sql`.
-- В результате будет таблица `translations` с 15 парами слов.
-  Файлового словаря больше нет — перевод всегда идёт через SQL.
+Рабочие настройки PostgreSQL **не изменены**. Java читает их из окружения Tomcat:
+`LAB3_DB_URL`, `LAB3_DB_USER`, `LAB3_DB_PASSWORD`.
+Пароль не добавляй в Git.
 
-### 2. Настроить переменные окружения Tomcat
+При старте WAR в логах Tomcat появятся `[LAB3-DB] STARTUP` и
+`[LAB3-DB] SUCCESS` или `FAILED`. В случае 503 смотри эти строки.
+Понадобится таблица `translations` из `Lab3Server/sql/init.sql`.
 
-На Windows создайте локальный файл `<TOMCAT_HOME>\bin\setenv.bat`
-(в папке Tomcat, **не в Git**) со следующим содержимым:
+Для Windows Tomcat, запущенного через `catalina.bat`, переменные можно
+задавать в `<TOMCAT_HOME>\\bin\\setenv.bat`. Если NetBeans запускает
+Tomcat иначе, окружение может не наследоваться.
 
-```bat
-set "LAB3_DB_URL=jdbc:postgresql://localhost:5432/lab3_dictionary"
-set "LAB3_DB_USER=lab3_user"
-set "LAB3_DB_PASSWORD=ВАШ_ЛОКАЛЬНЫЙ_ПАРОЛЬ"
-```
+## Код для защиты
 
-Перезапустите Tomcat. Если он работает как служба Windows, учтите: она
-может не использовать `setenv.bat`; задайте окружение непосредственно службе.
-Не записывайте настоящий пароль в репозиторий.
+- `MusicServlet.java`: читает MP3 из `WEB-INF` и отправляет байты по HTTP.
+- `GoldQuoteService.java`: HTTP GET Google Finance, чтение HTML, поиск цены.
+- `ApacheClient.java`: Swing-кнопки, HTTP-клиент, MP3-воспроизведение.
+- `MyServlet.java` / `Dictionary.java`: параметры запроса и JDBC.
 
-### Почему может появиться No suitable driver
-
-Tomcat 11 может инициализировать `DriverManager` до загрузки JDBC-драйвера
-из `WEB-INF/lib`. Поэтому `Dictionary.connect()` теперь явно вызывает
-`Class.forName("org.postgresql.Driver")` перед `getConnection()`.
-Это **не заменяет** сам JAR: при сборке и развёртывании WAR должен быть
-`WEB-INF/lib/postgresql-42.7.14.jar`, поскольку `pom.xml` содержит
-обычную зависимость `org.postgresql:postgresql` (без `provided`).
-
-После обновления обязательно проверьте новую развернутую версию:
-в консоли после развёртывания появятся сообщения `[LAB3-DB] STARTUP`,
-`SUCCESS` или `FAILED`. Старый текст `Ошибка словаря PostgreSQL`
-без префикса `[LAB3-DB]` указывает на выполнение старой версии сервлета.
-
-### Диагностика подключения PostgreSQL (HTTP 503)
-
-При развёртывании Lab3Server проверяет соединение с PostgreSQL и выполняет
-`SELECT COUNT(*) FROM translations`. В логах Tomcat ищите метку `[LAB3-DB]`:
-
-```text
-[LAB3-DB] STARTUP: url=jdbc:postgresql://localhost:5432/lab3_dictionary (...), user=postgres (...), LAB3_DB_PASSWORD=SET
-[LAB3-DB] SUCCESS: PostgreSQL подключен, translations доступна, записей=15
-```
-
-Если БД не работает, вместо SUCCESS будет `FAILED`, сообщение PostgreSQL,
-`SQLState` и stack trace. Если `LAB3_DB_PASSWORD=MISSING`, запущенный
-Tomcat **не получил** пароль; это не доказывает, что `setenv.bat` отсутствует:
-NetBeans может запускать Tomcat минуя стандартные bat-скрипты.
-`DEFAULT` рядом с URL/пользователем значит, что соответствующая переменная
-не задана (будут использованы `lab3_dictionary` и `lab3_user`).
-`ENV` значит, что переменная задана.
-
-Логи видны в **NetBeans → Output → Apache Tomcat** либо в
-`<TOMCAT_HOME>\\logs` (например, `localhost.YYYY-MM-DD.log`).
-При нажатии Translate появится `[LAB3-DB] Translate ...`, а при SQL-ошибке
-— `Translate FAILED` с реальной причиной.
-Пароль никогда не пишется в лог; выводится только `SET` или `MISSING`.
-Диагностика запускается заново после пересборки и повторного развёртывания WAR.
-
-Если используете своего пользователя `postgres`, укажите именно его в
-`LAB3_DB_USER` и **реальное имя созданной базы** в `LAB3_DB_URL`.
-Новая версия кода не создаёт базу автоматически.
-
-### Музыка из файла вместо генерации
-
-**Вариант 1 (проще):** скопируйте свой файл WAV в
-`Lab3Server/web/WEB-INF/music.wav`. Выполните `Clean and Build`,
-затем заново разверните `Lab3Server.war` на Tomcat.
-Файл включится в WAR и станет доступен только через `/MusicServlet`.
-
-**Вариант 2 (файл в любой папке компьютера):**
-задайте окружение процесса Tomcat, например, в `<TOMCAT_HOME>\\bin\\setenv.bat`:
-
-```bat
-set "LAB3_MUSIC_FILE=C:\\Users\\YourUser\\Music\\my-song.wav"
-```
-
-Укажите **свой** путь, затем полностью перезапустите Tomcat. Если он
-управляется через NetBeans, может потребоваться перезапустить NetBeans,
-чтобы сервер получил новые переменные окружения. Этот способ позволяет
-менять музыку без пересборки WAR (путь остаётся тем же).
-
-Оба варианта сохраняют учебную архитектуру:
-`Swing-клиент → HTTP GET /MusicServlet → Tomcat → WAV → javax.sound.sampled.Clip`.
-
-Кнопка `Музыка` воспроизводит песню из готового WAV-файла; повторное нажатие ставит воспроизведение на паузу, а следующее — продолжает с прежнего места. После конца трека следующий клик начинает его заново. Генерации звука нет.
-
-**Важно:** клиент использует стандартный `javax.sound.sampled` и ожидает
-WAV с поддерживаемым аудиоформатом (лучше PCM WAV). MP3 без дополнительных
-Java-библиотек может не воспроизводиться. Музыка, доступная только на
-компьютере клиента, но не сервера Tomcat, не будет доступна сервлету.
-**Личный музыкальный файл не загружайте в публичный GitHub без разрешения
-правообладателя.** Файл `Lab3Server/web/WEB-INF/music.wav` игнорируется Git.
-
-### 3. Собрать и развернуть WAR
-
-1. Сделайте `git pull --ff-only origin main`.
-2. В NetBeans закройте старый `Lab3Server` как Java SE-проект, если он ещё открыт.
-   Через **File → Open Project** откройте `Lab3Server` заново: теперь там `pom.xml`,
-   NetBeans должен распознать проект Maven WAR. Также откройте `Lab3Client`.
-3. Правый клик на `Lab3Server` → **Clean and Build** (или `mvn clean package` внутри Lab3Server).
-   Maven сам загрузит Servlet API для компиляции и JDBC-драйвер PostgreSQL для WAR.
-4. Новый файл: `Lab3Server/target/Lab3Server.war`.
-5. Скопируйте его в `<TOMCAT_HOME>\webapps\Lab3Server.war`, запустите Tomcat 11
-   (`<TOMCAT_HOME>\bin\catalina.bat run`) и проверьте адреса ниже.
-   Если Tomcat уже запущен, задеплойте обновлённый WAR с заменой старой версии.
-6. Запустите `Lab3Client` (обычный Run). По умолчанию он обращается к
-   `http://localhost:8080/Lab3Server`. Для другого контекста:
-   **Lab3Client → Properties → Run → VM Options**:
-   `-Dlab3.serverUrl=http://localhost:8080/ВАШ_КОНТЕКСТ`.
-
-### Проверка
-
-- `http://localhost:8080/Lab3Server/MyServlet?txt=cat&dir=en&format=text` → `кот`
-- `http://localhost:8080/Lab3Server/MyServlet?txt=dog&dir=en&format=text` → `собака`
-- `http://localhost:8080/Lab3Server/WordServlet` → DOCX
-- `http://localhost:8080/Lab3Server/MusicServlet` → WAV
-- `http://localhost:8080/Lab3Server/GoldServlet` → котировка или ошибка источника
-
-Ошибка `HTTP 503` при переводе означает проблему с PostgreSQL, SQL-таблицей
-или параметрами подключения. Проверяйте лог Tomcat.
-Ошибка `HTTP 403` при получении золота от внешнего сайта **не означает**
-ошибку Tomcat или JDBC: источники могут блокировать автоматические запросы.
-
-## Код по классам
-
-- `MyServlet.java`: читает параметры запроса и отправляет текст/HTML.
-- `Dictionary.java`: `DriverManager` + `PreparedStatement` + `ResultSet`, только PostgreSQL.
-- `WordServlet.java`: отдаёт оригинальный DOCX, клиент отображает содержимое справа.
-- `GoldServlet.java`: передаёт результат `GoldQuoteService`, которому может мешать HTTP 403.
-- `MusicServlet.java`: читает готовый WAV-файл и передаёт его по HTTP без генерации.
-
-Примечание: здесь выбран простой JDBC по одному соединению на перевод,
-без Tomcat JNDI DataSource или connection pool — для учебной работы этого достаточно.
-
-**Статус проверки:** структура Maven и файлы проекта проверены; реальная
-сборка WAR, запуск Tomcat и соединение с PostgreSQL должны быть проверены
-локально на вашем компьютере.
+**Проверка:** изменения опубликованы в GitHub; локальную сборку и реальное
+воспроизведение нужно проверить в NetBeans на твоём компьютере.

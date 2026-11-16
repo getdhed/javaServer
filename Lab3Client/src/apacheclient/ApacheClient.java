@@ -7,7 +7,6 @@ import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
-import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
@@ -19,9 +18,8 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
-import javax.sound.sampled.AudioInputStream;
-import javax.sound.sampled.AudioSystem;
-import javax.sound.sampled.Clip;
+import javazoom.jlgui.basicplayer.BasicPlayer;
+import javazoom.jlgui.basicplayer.BasicPlayerException;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JEditorPane;
@@ -54,7 +52,7 @@ public class ApacheClient extends JFrame {
     private final JButton wordButton = new JButton("Word");
     private final JButton goldButton = new JButton("Gold");
     private final JButton musicButton = new JButton("Музыка ▶");
-    private Clip musicClip;
+    private final BasicPlayer musicPlayer = new BasicPlayer();
     private final JLabel status = new JLabel("Введите слово или откройте Word-документ с сервера.");
     private final JEditorPane documentView = new JEditorPane();
 
@@ -122,7 +120,7 @@ public class ApacheClient extends JFrame {
         c.insets = new Insets(4, 0, 8, 0);
         controls.add(wordButton, c);
 
-        // Второй ряд кнопок: биржевая цена золота и музыка (старт/стоп).
+        // Второй ряд: цена золота и MP3 (пауза/продолжить).
         c.gridx = 0;
         c.gridy++;
         c.gridwidth = 2;
@@ -145,8 +143,8 @@ public class ApacheClient extends JFrame {
         c.insets = new Insets(16, 0, 6, 0);
         JLabel details = new JLabel("<html><b>Word</b> загружает настоящий DOCX<br>" +
                 "и показывает его справа, без Word.<br>"
-                + "<b>Gold</b> читает HTML Google Finance / Markets Insider.<br>"
-                + "<b>Музыка</b> скачивает WAV и запускает/останавливает его.</html>");
+                + "<b>Gold</b> показывает цену золота с Google Finance.<br>"
+                + "<b>Музыка</b> воспроизводит MP3 с сервера (пауза/продолжить).</html>");
         controls.add(details, c);
 
         c.gridy++;
@@ -294,7 +292,7 @@ public class ApacheClient extends JFrame {
     /** Загрузка котировки без блокировки EDT. Результат идёт в прежнее поле перевода. */
     private void showGold() {
         goldButton.setEnabled(false);
-        resultArea.setText("Загружаем цену фьючерса на золото с сайта биржи…");
+        resultArea.setText("Получаем цену золота с Google Finance…");
         status.setText("HTTP GET /GoldServlet → HTML источника → цена золота");
         new SwingWorker<String, Void>() {
             @Override
@@ -302,7 +300,7 @@ public class ApacheClient extends JFrame {
                 URL url = new URL(BASE_URL + "/GoldServlet");
                 HttpURLConnection connection = (HttpURLConnection) url.openConnection();
                 connection.setConnectTimeout(5000);
-                // Сервер может сходить на два внешних сайта, каждый с таймаутом.
+                // Ждём ответ GoldServlet (внешний сайт может отвечать медленно).
                 connection.setReadTimeout(30000);
                 connection.setRequestMethod("GET");
                 try {
@@ -335,7 +333,7 @@ public class ApacheClient extends JFrame {
                 try {
                     resultArea.setText(get());
                     resultArea.setCaretPosition(0);
-                    status.setText("Котировка запрошена: COMEX, USD за тройскую унцию.");
+                    status.setText("Цена фьючерса GCW00 с Google Finance.");
                 } catch (Exception ex) {
                     resultArea.setText("Ошибка получения золота: " + errorMessage(ex));
                     status.setText("Не удалось прочитать HTML биржевого сайта.");
@@ -344,85 +342,58 @@ public class ApacheClient extends JFrame {
         }.execute();
     }
 
-    /** Один переключатель: скачать WAV по HTTP и играть по кругу / остановить. */
+    /** Одна MP3-песня с сервера: запустить, поставить на паузу, продолжить. */
     private void toggleMusic() {
-        // Повторное нажатие ставит на паузу и продолжает с того же места.
-        if (musicClip != null && musicClip.isOpen()) {
-            if (musicClip.isRunning()) {
-                musicClip.stop(); // Не close(): сохраняем позицию воспроизведения.
+        try {
+            if (musicPlayer.getStatus() == BasicPlayer.PLAYING) {
+                musicPlayer.pause();
                 musicButton.setText("Музыка ▶ Продолжить");
                 status.setText("Музыка на паузе.");
-            } else {
-                // После достижения конца песни следующий клик начинает её сначала.
-                if (musicClip.getFramePosition() >= musicClip.getFrameLength()) {
-                    musicClip.setFramePosition(0);
-                }
-                musicClip.start();
+                return;
+            }
+            if (musicPlayer.getStatus() == BasicPlayer.PAUSED) {
+                musicPlayer.resume();
                 musicButton.setText("Музыка ⏸ Пауза");
                 status.setText("Музыка воспроизводится.");
+                return;
             }
+        } catch (BasicPlayerException ex) {
+            resultArea.setText("Ошибка музыки: " + ex.getMessage());
             return;
         }
+
         musicButton.setEnabled(false);
-        status.setText("Загружаем WAV с сервера…");
-        new SwingWorker<Clip, Void>() {
+        status.setText("Загружаем MP3 с сервера…");
+        new SwingWorker<Void, Void>() {
             @Override
-            protected Clip doInBackground() throws Exception {
-                URL url = new URL(BASE_URL + "/MusicServlet");
-                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-                connection.setConnectTimeout(5000);
-                connection.setReadTimeout(12000);
-                connection.setRequestMethod("GET");
-                try {
-                    if (connection.getResponseCode() != 200) {
-                        throw new IOException("MusicServlet вернул HTTP "
-                                + connection.getResponseCode());
-                    }
-                    try (InputStream in = new BufferedInputStream(connection.getInputStream());
-                         AudioInputStream sound = AudioSystem.getAudioInputStream(in)) {
-                        Clip clip = AudioSystem.getClip();
-                        try {
-                            clip.open(sound);
-                            return clip;
-                        } catch (Exception ex) {
-                            clip.close();
-                            throw ex;
-                        }
-                    }
-                } finally {
-                    connection.disconnect();
-                }
+            protected Void doInBackground() throws Exception {
+                musicPlayer.open(new URL(BASE_URL + "/MusicServlet"));
+                musicPlayer.play();
+                return null;
             }
 
             @Override
             protected void done() {
                 musicButton.setEnabled(true);
                 try {
-                    musicClip = get();
-                    musicClip.setFramePosition(0);
-                    musicClip.start();
+                    get();
                     musicButton.setText("Музыка ⏸ Пауза");
-                    status.setText("Играет готовый WAV-файл, полученный по HTTP. Повторное нажатие — пауза.");
+                    status.setText("MP3 играет.");
                 } catch (Exception ex) {
-                    status.setText("Не удалось воспроизвести WAV.");
                     resultArea.setText("Ошибка музыки: " + errorMessage(ex));
+                    status.setText("Не удалось воспроизвести MP3.");
                 }
             }
         }.execute();
     }
 
-    private void stopMusic() {
-        if (musicClip != null) {
-            musicClip.stop();
-            musicClip.close();
-            musicClip = null;
-        }
-        musicButton.setText("Музыка ▶");
-    }
-
     @Override
     public void dispose() {
-        stopMusic();
+        try {
+            musicPlayer.stop();
+        } catch (BasicPlayerException ex) {
+            // При закрытии окна больше ничего делать не требуется.
+        }
         super.dispose();
     }
 

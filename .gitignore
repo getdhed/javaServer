@@ -25,3 +25,4 @@ Thumbs.db
 
 # Personal music: not tracked in the public repository
 Lab3Server/web/WEB-INF/music.wav
+Lab3Server/web/WEB-INF/music.mp3
